@@ -1,0 +1,1 @@
+# azure-rg-del-tool
