@@ -56,9 +56,10 @@ func main() {
 	for _, rg := range rgNames {
 		wg.Add(1)
 
+		r := rg
 		go func() {
 			defer wg.Done()
-			groupDelWorker(rg)
+			groupDelWorker(r)
 		}()
 	}
 	wg.Wait()
