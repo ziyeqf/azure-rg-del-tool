@@ -3,3 +3,6 @@
 /workspace.xml
 # Editor-based HTTP Client requests
 /httpRequests/
+/azure-rg-del-tool.iml
+/modules.xml
+/vcs.xml
