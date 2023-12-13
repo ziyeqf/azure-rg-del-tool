@@ -151,9 +151,12 @@ func deleteSoftdeltedItems(rgName string, vaultName string) {
 		id := item["id"].(string)
 		recoverCmd := exec.Command("az", "backup", "protection", "undelete", "--ids", id)
 		fmt.Println(recoverCmd.String())
-		recoverCmd.Run()
+		err := recoverCmd.Run()
+		if err != nil {
+			fmt.Println(err)
+		}
 
-		deleteCmd := exec.Command("az", "backup", "protection", "disable", "--ids", id, "--yes")
+		deleteCmd := exec.Command("az", "backup", "protection", "disable", "--ids", id, "--yes", "--delete-backup-data", "true")
 		fmt.Println(deleteCmd.String())
 		deleteCmd.Run()
 	}
