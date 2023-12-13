@@ -110,6 +110,51 @@ func diskAccessRevoke(rgName string) {
 	}
 }
 
+// disable the soft delete feature and recover soft deleted items
+// then they will be able to be deleted
+func RecoveryVaultSoftDeleteRevoke(rgName string) {
+	cmd := exec.Command("az", "backup", "vault", "list", "--resource-group", rgName)
+	fmt.Println(cmd.String())
+	vaultList, err := cmd.Output()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var vaultListJson []map[string]interface{}
+	json.Unmarshal(vaultList, &vaultListJson)
+	for _, vault := range vaultListJson {
+		vaultId := vault["id"].(string)
+		softDeleteFeatureRevoke(vaultId)
+	}
+}
+
+func softDeleteFeatureRevoke(vaultId string) {
+	cmd := exec.Command("az", "backup", "vault", "backup-properties", "set", "--ids", vaultId, "--soft-delete-feature-state", "disabled")
+	fmt.Println(cmd.String())
+	cmd.Output()
+}
+
+func recoverSoftdeltedItems(rgName string, vaultName string) {
+	cmd := exec.Command("az", "backup", "item", "list", "--resource-group", rgName, "--vault-name", vaultName)
+	fmt.Println(cmd.String())
+	itemsList, err := cmd.Output()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var itemsListJson []map[string]interface{}
+	json.Unmarshal(itemsList, &itemsListJson)
+	for _, item := range itemsListJson {
+		// az backup protection undelete
+		id := item["id"].(string)
+		// backupType := item["properties"].(map[string]interface{})["backupManagementType"].(string)
+		// containerName := item["properties"].(map[string]interface{})["containerName"].(string)
+		recoverCmd := exec.Command("az", "backup", "protection", "undelete", "--ids", id)
+		fmt.Println(recoverCmd.String())
+		fmt.Println(recoverCmd.Output())
+	}
+}
+
 func askForConfirm(msg string) bool {
 	fmt.Println(msg)
 
