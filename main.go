@@ -68,9 +68,10 @@ func main() {
 func groupDelWorker(rgName string) {
 	groupUnlock(rgName)
 	diskAccessRevoke(rgName)
+	RecoveryVaultSoftDeleteRevoke(rgName)
 	delCmd := exec.Command("az", "group", "delete", "--resource-group", rgName, "--yes")
 	fmt.Println(delCmd.String())
-	delCmd.Output()
+	delCmd.Run()
 	fmt.Printf("%s del done\n", rgName)
 }
 
@@ -88,7 +89,7 @@ func groupUnlock(rgName string) {
 		}
 		cmd := exec.Command("az", "lock", "delete", "--ids", lockId)
 		fmt.Println(cmd.String())
-		cmd.Output()
+		cmd.Run()
 	}
 }
 
@@ -106,7 +107,7 @@ func diskAccessRevoke(rgName string) {
 		diskId := disk["id"].(string)
 		revokeCmd := exec.Command("az", "disk", "revoke-access", "--ids", diskId)
 		fmt.Println(revokeCmd.String())
-		revokeCmd.Output()
+		revokeCmd.Run()
 	}
 }
 
@@ -124,17 +125,19 @@ func RecoveryVaultSoftDeleteRevoke(rgName string) {
 	json.Unmarshal(vaultList, &vaultListJson)
 	for _, vault := range vaultListJson {
 		vaultId := vault["id"].(string)
+		vaultName := vault["name"].(string)
 		softDeleteFeatureRevoke(vaultId)
+		deleteSoftdeltedItems(rgName, vaultName)
 	}
 }
 
 func softDeleteFeatureRevoke(vaultId string) {
-	cmd := exec.Command("az", "backup", "vault", "backup-properties", "set", "--ids", vaultId, "--soft-delete-feature-state", "disabled")
+	cmd := exec.Command("az", "backup", "vault", "backup-properties", "set", "--ids", vaultId, "--soft-delete-feature-state", "disable")
 	fmt.Println(cmd.String())
-	cmd.Output()
+	cmd.Run()
 }
 
-func recoverSoftdeltedItems(rgName string, vaultName string) {
+func deleteSoftdeltedItems(rgName string, vaultName string) {
 	cmd := exec.Command("az", "backup", "item", "list", "--resource-group", rgName, "--vault-name", vaultName)
 	fmt.Println(cmd.String())
 	itemsList, err := cmd.Output()
@@ -145,13 +148,14 @@ func recoverSoftdeltedItems(rgName string, vaultName string) {
 	var itemsListJson []map[string]interface{}
 	json.Unmarshal(itemsList, &itemsListJson)
 	for _, item := range itemsListJson {
-		// az backup protection undelete
 		id := item["id"].(string)
-		// backupType := item["properties"].(map[string]interface{})["backupManagementType"].(string)
-		// containerName := item["properties"].(map[string]interface{})["containerName"].(string)
 		recoverCmd := exec.Command("az", "backup", "protection", "undelete", "--ids", id)
 		fmt.Println(recoverCmd.String())
-		fmt.Println(recoverCmd.Output())
+		recoverCmd.Run()
+
+		deleteCmd := exec.Command("az", "backup", "protection", "disable", "--ids", id, "--yes")
+		fmt.Println(deleteCmd.String())
+		deleteCmd.Run()
 	}
 }
 
